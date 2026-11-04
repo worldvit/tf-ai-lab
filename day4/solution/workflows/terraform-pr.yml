@@ -1,10 +1,10 @@
 # PR이 열리면 live/ 코드를 검사하고 plan 결과를 PR 코멘트로 남긴다
+# (모든 PR에서 실행 — main 브랜치 규칙의 필수 검사 "plan"이 항상 보고되도록)
 name: terraform-pr
 
 on:
   pull_request:
     branches: [main]
-    paths: ["live/**", ".github/workflows/terraform-*.yml"]
 
 permissions:
   id-token: write       # OIDC 토큰 발급 (AWS 로그인)
@@ -53,6 +53,8 @@ jobs:
           terraform validate
 
       - name: tflint
+        env:
+          GITHUB_TOKEN: ${{ github.token }}   # 플러그인 내려받기 요청 한도 완화
         run: |
           tflint --init
           tflint --format compact
