@@ -1,0 +1,90 @@
+# PR이 열리면 live/ 코드를 검사하고 plan 결과를 PR 코멘트로 남긴다
+# (모든 PR에서 실행 — main 브랜치 규칙의 필수 검사 "plan"이 항상 보고되도록)
+name: terraform-pr
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  id-token: write       # OIDC 토큰 발급 (AWS 로그인)
+  contents: read
+  pull-requests: write  # PR 코멘트
+
+concurrency:
+  group: terraform-live
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: live
+    env:
+      TF_IN_AUTOMATION: "1"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ap-northeast-2
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "1.17.1"
+          terraform_wrapper: false
+
+      - uses: terraform-linters/setup-tflint@v6
+        with:
+          tflint_version: v0.65.0
+
+      - name: 검사 도구 설치 (Checkov · Trivy)
+        run: |
+          pip install --quiet checkov==3.4.3
+          curl -fsSL -o /tmp/trivy.deb https://github.com/aquasecurity/trivy/releases/download/v0.76.1/trivy_0.76.1_Linux-64bit.deb
+          sudo dpkg -i /tmp/trivy.deb
+
+      - name: fmt · init · validate
+        run: |
+          terraform fmt -check -recursive
+          terraform init -input=false -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}"
+          terraform validate
+
+      - name: tflint
+        env:
+          GITHUB_TOKEN: ${{ github.token }}   # 플러그인 내려받기 요청 한도 완화
+        run: |
+          tflint --init
+          tflint --format compact
+
+      - name: Checkov
+        run: checkov -d . --quiet --compact
+
+      - name: Trivy
+        run: trivy config --exit-code 1 --severity HIGH,CRITICAL .
+
+      - name: plan
+        id: plan
+        run: |
+          terraform plan -input=false -no-color -lock-timeout=120s -out=tfplan | tee plan.txt
+          echo "summary=$(grep -E '^(Plan:|No changes)' plan.txt | head -1)" >> "$GITHUB_OUTPUT"
+
+      - name: PR 코멘트
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "### Terraform plan — ${{ job.status }}"
+            echo "**${{ steps.plan.outputs.summary || '검사 단계에서 실패, Actions 로그 확인' }}**"
+            echo
+            echo "<details><summary>plan 전체 보기</summary>"
+            echo
+            echo '```'
+            [ -f plan.txt ] && tail -c 60000 plan.txt
+            echo '```'
+            echo "</details>"
+          } > comment.md
+          gh pr comment ${{ github.event.pull_request.number }} --body-file comment.md
