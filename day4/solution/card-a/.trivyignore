@@ -1,0 +1,9 @@
+# Trivy 예외 — 이유를 위에 한 줄씩
+# 인터넷용 ALB는 공개가 목적 (Day 3)
+AWS-0053
+# 도메인·인증서가 없어 HTTP 리스너 사용 (Day 3)
+AWS-0054
+# 비용 — CloudFront WAF
+AWS-0011
+# 비용 — KMS 고객 관리 키 대신 S3 관리 키(AES256)
+AWS-0132

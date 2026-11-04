@@ -28,6 +28,22 @@ resource "aws_s3_bucket_versioning" "site" {
   }
 }
 
+# 이전 버전은 30일 뒤 삭제 (버전 관리로 쌓이는 비용 관리)
+resource "aws_s3_bucket_lifecycle_configuration" "site" {
+  bucket = aws_s3_bucket.site.id
+  rule {
+    id     = "expire-noncurrent"
+    status = "Enabled"
+    filter {}
+    noncurrent_version_expiration {
+      noncurrent_days = 30
+    }
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
+}
+
 resource "aws_s3_object" "index" {
   bucket       = aws_s3_bucket.site.id
   key          = "index.html"
@@ -44,6 +60,7 @@ resource "aws_cloudfront_origin_access_control" "site" {
 }
 
 resource "aws_cloudfront_distribution" "site" {
+  #checkov:skip=CKV2_AWS_32:오탐 — 관리형 SecurityHeadersPolicy를 ID로 연결함
   enabled             = true
   default_root_object = "index.html"
   price_class         = "PriceClass_200"
@@ -56,12 +73,13 @@ resource "aws_cloudfront_distribution" "site" {
   }
 
   default_cache_behavior {
-    target_origin_id       = "s3-site"
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["GET", "HEAD"]
-    cached_methods         = ["GET", "HEAD"]
-    cache_policy_id        = "658327ea-f89d-4fab-a63d-7e88639e58f6" # 관리형 CachingOptimized
-    compress               = true
+    target_origin_id           = "s3-site"
+    viewer_protocol_policy     = "redirect-to-https"
+    allowed_methods            = ["GET", "HEAD"]
+    cached_methods             = ["GET", "HEAD"]
+    cache_policy_id            = "658327ea-f89d-4fab-a63d-7e88639e58f6" # 관리형 CachingOptimized
+    response_headers_policy_id = "67f7725c-6f97-4210-82d7-5512b31e9d03" # 관리형 SecurityHeadersPolicy
+    compress                   = true
   }
 
   restrictions {
