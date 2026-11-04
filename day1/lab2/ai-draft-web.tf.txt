@@ -1,0 +1,55 @@
+# ─────────────────────────────────────────────────────────────
+# AI 검증 훈련 ① 용 "AI 초안" 예시 (실제 AI 답변에서 자주 보이는 실수를 모았다)
+# web.tf로 복사해 validate·plan·apply를 돌리며 오류를 찾고, 오류 메시지를 AI에 되먹여 고친다.
+#   cp ai-draft-web.tf.txt web.tf
+# ─────────────────────────────────────────────────────────────
+
+resource "aws_security_group" "web" {
+  name   = "tfai-web-sg"
+  vpc_id = aws_vpc.main.id
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_instance" "web" {
+  ami             = "ami-0c55b159cbfafe1f0"
+  instance_type   = "t2.micro"
+  subnet_id       = aws_subnet.public[0].id
+  security_groups = [aws_security_group.web.name]
+  key_name        = "my-key"
+
+  user_data = <<-EOT
+    #!/bin/bash
+    yum install -y httpd
+    echo "Hello World" > /var/www/html/index.html
+    systemctl start httpd
+  EOT
+
+  tags = { Name = "tfai-web" }
+}
+
+resource "aws_eip" "web" {
+  instance = aws_instance.web.id
+  vpc      = true
+}
+
+output "web_url" {
+  value = "http://${aws_eip.web.public_ip}"
+}
