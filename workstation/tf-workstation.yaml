@@ -80,13 +80,15 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
-          set -eux
+          set -euxo pipefail
           dnf install -y git jq unzip python3-pip dnf-plugins-core
           # Terraform 1.17.x (HashiCorp 공식 저장소)
           dnf config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
           dnf install -y 'terraform-1.17.*'
           # tflint
-          curl -fsSL https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+          TL=$(curl -fsSL https://api.github.com/repos/terraform-linters/tflint/releases/latest | jq -r .tag_name)
+          curl -fsSL -o /tmp/tflint.zip https://github.com/terraform-linters/tflint/releases/download/$TL/tflint_linux_amd64.zip
+          unzip -o -q /tmp/tflint.zip -d /usr/local/bin
           # Checkov (전용 가상환경)
           python3 -m venv /opt/checkov && /opt/checkov/bin/pip install -q checkov && ln -sf /opt/checkov/bin/checkov /usr/local/bin/checkov
           # Trivy

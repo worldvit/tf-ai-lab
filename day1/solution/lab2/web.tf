@@ -25,12 +25,12 @@ resource "aws_vpc_security_group_egress_rule" "all" {
 }
 
 resource "aws_instance" "web" {
-  ami                    = data.aws_ssm_parameter.al2023.value
-  instance_type          = "t3.micro"
-  subnet_id              = aws_subnet.public[0].id
-  vpc_security_group_ids = [aws_security_group.web.id]
+  ami                         = data.aws_ssm_parameter.al2023.value
+  instance_type               = "t3.micro"
+  subnet_id                   = aws_subnet.public[0].id
+  vpc_security_group_ids      = [aws_security_group.web.id]
   user_data_replace_on_change = true
-  user_data = <<-EOT
+  user_data                   = <<-EOT
     #!/bin/bash
     dnf install -y nginx
     echo "<h1>Hello from Terraform + AI</h1><p>$(hostname -f)</p>" > /usr/share/nginx/html/index.html
