@@ -11,9 +11,11 @@ permissions:
   contents: read
   pull-requests: write  # PR 코멘트
 
+# PR마다 따로 실행(새 커밋이 오면 이전 실행 취소). 배포 그룹(terraform-live)과 나눈 이유:
+# 승인을 기다리는 apply가 그룹을 붙잡고 있으면 PR 검사까지 멈추기 때문
 concurrency:
-  group: terraform-live
-  cancel-in-progress: false
+  group: terraform-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   plan:
