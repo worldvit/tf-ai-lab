@@ -8,6 +8,11 @@ variable "github_repo" {
   }
 }
 
+locals {
+  owner = split("/", var.github_repo)[0]
+  repo  = split("/", var.github_repo)[1]
+}
+
 # GitHub의 토큰 발급 서버를 계정에 등록 (계정당 URL 하나)
 resource "aws_iam_openid_connect_provider" "github" {
   url            = "https://token.actions.githubusercontent.com"
@@ -27,12 +32,15 @@ data "aws_iam_policy_document" "trust" {
       values   = ["sts.amazonaws.com"]
     }
     # 내 저장소의 PR 실행과 production 환경 실행만 이 역할을 쓸 수 있다
+    # sub 형식은 두 가지: 예전 repo:아이디/저장소:...  새 저장소 repo:아이디@숫자ID/저장소@숫자ID:...
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
-        "repo:${var.github_repo}:pull_request",
-        "repo:${var.github_repo}:environment:production",
+        "repo:${local.owner}/${local.repo}:pull_request",
+        "repo:${local.owner}/${local.repo}:environment:production",
+        "repo:${local.owner}@*/${local.repo}@*:pull_request",
+        "repo:${local.owner}@*/${local.repo}@*:environment:production",
       ]
     }
   }
