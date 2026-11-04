@@ -1,0 +1,29 @@
+resource "aws_security_group" "db" {
+  name   = "${var.name}-db"
+  vpc_id = aws_vpc.main.id
+
+  ingress {
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_db_subnet_group" "main" {
+  name       = "${var.name}-db"
+  subnet_ids = [for s in aws_subnet.private : s.id]
+}
+
+resource "aws_db_instance" "main" {
+  identifier             = "${var.name}-db"
+  engine                 = "mysql"
+  engine_version         = "8.4"
+  instance_class         = "db.t4g.micro"
+  allocated_storage      = 20
+  db_subnet_group_name   = aws_db_subnet_group.main.name
+  vpc_security_group_ids = [aws_security_group.db.id]
+  publicly_accessible    = true
+  username               = "admin"
+  password               = "Password1234!"
+}
