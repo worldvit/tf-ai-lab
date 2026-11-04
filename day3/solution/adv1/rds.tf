@@ -18,6 +18,7 @@ resource "aws_db_subnet_group" "main" {
   subnet_ids = [for s in aws_subnet.private : s.id]
 }
 
+# manage_master_user_password: 비밀번호를 Secrets Manager가 만들고 보관 (코드·상태에 비밀번호 없음)
 resource "aws_db_instance" "main" {
   identifier                  = "${var.name}-db"
   engine                      = "mysql"
@@ -30,7 +31,6 @@ resource "aws_db_instance" "main" {
   vpc_security_group_ids      = [aws_security_group.db.id]
   publicly_accessible         = false
   username                    = "admin"
-  # 비밀번호를 Secrets Manager가 만들고 보관
   manage_master_user_password = true
   backup_retention_period     = 1
   copy_tags_to_snapshot       = true
