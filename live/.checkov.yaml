@@ -1,0 +1,24 @@
+# Checkov 설정 — 이 폴더에서 checkov -d . 를 실행하면 자동으로 읽는다
+# skip-check는 "실습 환경이라 일부러 두는 예외"만. 줄마다 이유를 남긴다.
+# 운영 환경이라면 아래 항목도 모두 고쳐야 한다.
+framework:
+  - terraform
+skip-check:
+  # HTTPS — 실습 계정에 도메인·인증서가 없어 HTTP 80만 사용
+  - CKV_AWS_2
+  - CKV_AWS_103
+  - CKV_AWS_378
+  - CKV2_AWS_20
+  # 비용 — WAF, VPC 흐름 로그, ALB 액세스 로그, RDS 향상된 모니터링·로그, Multi-AZ
+  - CKV2_AWS_28
+  - CKV2_AWS_11
+  - CKV_AWS_91
+  - CKV_AWS_118
+  - CKV_AWS_129
+  - CKV_AWS_157
+  # 정리 — 수업 끝에 바로 삭제해야 하므로 삭제 보호를 끔
+  - CKV_AWS_150
+  - CKV_AWS_293
+  # 범위 밖 — RDS IAM 인증, AZ ID 고정
+  - CKV_AWS_161
+  - CKV_AWS_394
